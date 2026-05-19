@@ -262,6 +262,15 @@
             const isLong = ["0", "1", "2", "3"].includes(formatSelect.options[i].value);
             formatSelect.options[i].disabled = (fr === "FR2" && isLong);
         }
+        // 選択中のプリアンブルフォーマットがdisabledになった場合、有効なプリアンブルフォーマットに変更
+        if (formatSelect.options[formatSelect.selectedIndex].disabled) {
+            for (let i = 0; i < formatSelect.options.length; i++) {
+                if (!formatSelect.options[i].disabled) {
+                    formatSelect.selectedIndex = i;
+                    break;
+                }
+            }
+        }
         calculate();
     }
 
