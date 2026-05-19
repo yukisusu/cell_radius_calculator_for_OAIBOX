@@ -286,14 +286,16 @@
         }
         let distGP = hasGP ? (t_gp * C / 2) : 0;
 
-        // 2. CP長による距離制限（format Aのみ）
-        const t_path = spec.path_profile / 2 ** mu * Kappa * Tc;
+        // 2. CP長による距離制限（format Aのみ距離制限に使用、それ以外のフォーマットも後続の計算に使用する）
         if (isshort) {
             var t_cp = spec.cp / 2 ** mu * Kappa * Tc;
+            var t_path = spec.path_profile / 2 ** mu * Kappa * Tc;
         }
-        // プリアンブルの全長を計算するために算出する
+        // t_cp：プリアンブルの全長を計算するために算出する
+        // t_path：ZCZによる距離制限の計算で遅延スプレッドを使用するために算出する
         else {
             var t_cp = spec.cp * Kappa * Tc;
+            var t_path = spec.path_profile * Kappa * Tc;
         }
         // マルチパス（t_path）を考慮したCP長による距離制限
         let distCP = hasGP ? 0 : (t_cp - t_path) * C / 2;
