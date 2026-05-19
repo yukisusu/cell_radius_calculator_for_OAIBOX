@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>OAIBOX 5G NR Cell Radius Calculator</title>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        :root { --primary: #111987; --secondary: #f0f4f8; --accent: #e63946; --status-ok: #2e7d32; --status-ng: #d32f2f; --white: #fff; --grey: #888; --dark: #333; }
+        body { font-family: "Segoe UI", "Meiryo", sans-serif; line-height: 1.4; background-color: #f8f9fa; color: var(--dark); max-width: 1100px; margin: 0 auto; padding: 20px; }
+        .app-container { background: var(--white); border: 1px solid #ddd; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+        .header { background: var(--primary); color: var(--white); padding: 20px; text-align: center; }
+        .header h1 { margin: 0; font-size: 1.4rem; letter-spacing: 1px; }
+        .content { padding: 25px; }
+
+        /* parameter settings */
+        .settings-grid { background: #fcfcfc; padding: 20px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 25px; }
+        .settings-row { display: flex; justify-content: center; flex-wrap: wrap; gap: 20px; }
+        .control-group { display: flex; flex-direction: column; min-width: 180px; flex: 1; }
+        label { font-weight: bold; margin-bottom: 5px; font-size: 0.75rem; color: var(--grey); text-transform: uppercase; }
+        select { padding: 8px; border: 1px solid #ccc; border-radius: 6px; background: var(--white); font-size: 0.9rem; cursor: pointer; }
+
+        .formula-box { margin: 0 0 25px 0; background: #fdfdfd; padding: 10px; border: 1px solid #eee; border-radius: 8px; text-align: center; font-size: 1.2rem; }
+
+        /* calculation results */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 20px;
+            align-items: stretch;
+        }
+
+        @media (max-width: 850px) { .main-layout { grid-template-columns: 1fr; } }
+
+        .res-card {
+            background: var(--white);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #d1d9e0;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .section-title { border-left: 5px solid var(--primary); padding-left: 10px; margin: 0 0 15px 0; color: var(--primary); font-size: 1rem; }
+
+        .result-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .result-table th, .result-table td { padding: 12px 10px; border-bottom: 1px solid #eee; text-align: left; }
+        .val-cell { font-family: "Cascadia Code", monospace; color: var(--primary); font-weight: bold; text-align: right; }
+        .disabled-row { background-color: #fafafa; color: #ccc; }
+        .disabled-row .val-cell { color: #ccc; }
+
+        /* max cell size and TDD info */
+        .right-stack { display: flex; flex-direction: column; gap: 20px; height: 100%; }
+
+        /* max cell size */
+        .max-radius-box {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: var(--primary);
+            color: white;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.2);
+        }
+        .max-radius-label { font-size: 0.9rem; opacity: 0.9; margin-bottom: 10px; font-weight: bold; }
+        .max-radius-val { font-size: 4rem; font-weight: bold; color: #ffeb3b; line-height: 1; }
+        .max-radius-unit { font-size: 1.2rem; margin-left: 5px; color: white; }
+
+        /* TDD info */
+        .tdd-card { background: #fffbe6; border: 1px solid #ffe58f; }
+        .tdd-info { font-size: 0.9rem; line-height: 1.8; }
+        .tdd-info strong { color: #856404; }
+
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="header"><h1>OAIBOX 5G NR セル半径 計算機</h1></div>
+
+    <div class="content">
+        <div class="settings-grid">
+            <div class="settings-row">
+                <div class="control-group">
+                    <label>周波数範囲</label>
+                    <select id="frType" onchange="update()">
+                        <option value="FR1">FR1 (4100 - 7125 MHz)</option>
+                        <option value="FR2">FR2 (24250 - 71000 MHz)</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>プリアンブル フォーマット</label>
+                    <select id="format" onchange="calculate()">
+                        <optgroup label="Long Preamble (L=839)">
+                            <option value="0">Format 0</option>
+                            <option value="1">Format 1</option>
+                            <option value="2">Format 2</option>
+                            <option value="3">Format 3</option>
+                        </optgroup>
+                        <optgroup label="Short Preamble (L=139)">
+                            <option value="A1" selected>Format A1</option>
+                            <option value="A2">Format A2</option>
+                            <option value="A3">Format A3</option>
+                            <option value="B1">Format B1</option>
+                            <option value="B2">Format B2</option>
+                            <option value="B3">Format B3</option>
+                            <option value="B4">Format B4</option>
+                            <option value="C0">Format C0</option>
+                            <option value="C2">Format C2</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Ncs (ZCZ設定)</label>
+                    <select id="zczConfig" onchange="calculate()">
+                        <script>for(let i=0; i<=15; i++) document.write(`<option value="${i}">${i}</option>`);</script>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>モード</label>
+                    <select id="duplexMode" onchange="update()">
+                        <option value="FDD">FDD</option>
+                        <option value="TDD" selected>TDD</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>SCS (自動選択)</label>
+                    <select id="scs" onchange="calculate()" disabled>
+                        <option value="15">15 kHz</option>
+                        <option value="30" selected>30 kHz</option>
+                        <option value="120">120 kHz</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="formula-box">
+            <div style="font-size: 0.75rem; color: var(--grey); margin-bottom: 5px;">A. Chakrapani, "On the Design Details of SS/PBCH, Signal Generation and PRACH in 5G-NR,"の式を基に作成</div>
+            $$ \text{Cell Radius } \le \left( \frac{N_{CS}}{\Delta f_{RA} L_{RA}} - \text{Delay Spread} \right) \times \frac{\text{Light Speed}}{2} $$
+        </div>
+
+        <div class="main-layout">
+            <div class="res-card">
+                <h3 class="section-title">パラメータ別許容距離</h3>
+                <table class="result-table">
+                    <thead>
+                        <tr><th>項目</th><th>時間長</th><th>許容距離</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr id="rowGP">
+                            <th>GP長 (Guard Period)</th>
+                            <td id="timeGP" class="val-cell">-</td>
+                            <td id="distGP" class="val-cell">-</td>
+                        </tr>
+                        <tr id="rowCP">
+                            <th>有効CP長 (CP - Delay)</th>
+                            <td id="timeCP" class="val-cell">-</td>
+                            <td id="distCP" class="val-cell">-</td>
+                        </tr>
+                        <tr id="rowZCZ">
+                            <th>ZCZ長 (Cyclic Shift)</th>
+                            <td id="timeZCZ" class="val-cell">-</td>
+                            <td id="distZCZ" class="val-cell">-</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="right-stack">
+                <div class="max-radius-box">
+                    <div class="max-radius-label">最大セル半径 (理論値)</div>
+                    <div>
+                        <span id="finalRadius" class="max-radius-val">-</span>
+                        <span class="max-radius-unit">m</span>
+                    </div>
+                </div>
+
+                <div class="res-card tdd-card">
+                    <h3 class="section-title">TDD要件</h3>
+                    <div class="tdd-info">
+                        ・最小ULスロット数: <span id="ulSlots" style="font-weight:bold;">-</span><br>
+                        ・最大所要ガードシンボル数: <span id="guardSymbols" style="font-weight:bold;">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="res-card" style="margin-top: 20px; width: 100%; box-sizing: border-box; clear: both;">
+            <h3 class="section-title">前提条件</h3>
+            <ul style="font-size: 0.85rem; color: #444; padding-left: 20px; line-height: 1.7;">
+                <li>本計算機はプロトコルベースの理論値計算を行うものであり、リンクバジェット計算は対象外です。</li>
+                <li>セルサイズを制限する以下の主なパラメータに絞って計算を行います。</li>
+                    <ul style="padding-left: 20px; list-style-type: disc;">
+                        <li>GP（Guard Period）:</strong> 伝搬遅延によるプリアンブル末尾の他スロットへの干渉を防ぐ。</li>
+                        <li>CP（Cyclic Prefix）:</strong> マルチパスによる符号間干渉を防ぐ。GP長が0のFormat Aでのみ考慮する。</li>
+                        <li>ZCZ（Zero Correlation Zone）:</strong> 同じルート系列のプリアンブル同士を識別する。0（サイクリックシフトなし）の場合は制限なしとして扱う。</li>
+                    </ul>
+                <li>サイクリックシフトはUnrestricted setsのみを想定しています。</li>
+                <li>ショートプリアンブルの系列長は139のみを想定しています。</li>
+                <li>実運用時の達成可能な距離を保証するものではありません。</li>
+                <li>OAI実装の制限により、一部のパラメータ設定が適用できない場合があります。</li>
+                </ul>
+            <h3 class="section-title">参考文献</h3>
+            <ul style="font-size: 0.85rem; color: #444; padding-left: 20px; line-height: 1.7;">
+                <li>3GPP TS 38.211 V19.2.0 "NR; Physical channels and modulation", 2025</li>
+                <li>A. Chakrapani, "On the Design Details of SS/PBCH, Signal Generation and PRACH in 5G-NR," in IEEE Access, vol. 8, pp. 136617-136637, 2020, doi: 10.1109/ACCESS.2020.3010500.</li>
+                <li>M. Kottkamp, A. Pandey, D. Raddino, A. Roessler and R. Stuhlfauth, "5G NEW RADIO," ROHDE & SCHWARZ GmbH & Co KG, 2022</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+    const C = 299792458;
+    // TS 38.211 section 4.1
+    const Tc = 1 / (480000 * 4096);
+    const Kappa = 64;
+
+    // L, cp, seq, scs_ra from "3GPP TS 38.211" Table 6.3.3.1-1, 2
+    // gp from M. Kottkamp, A. Pandey, D. Raddino, A. Roessler and R. Stuhlfauth, "5G NEW RADIO," ROHDE & Schwarz GmbH & Co KG, 2022 page 99-100
+    // path_profile from A. Chakrapani, "On the Design Details of SS/PBCH, Signal Generation and PRACH in 5G-NR," Table 2: NR PRACH Cell dimensioning
+    const formatSpecs = {
+        "0":  { L: 839, cp: 3168,  seq: 24576,   gp: 2976,  path_profile: 192, scs_ra: 1.25 },
+        "1":  { L: 839, cp: 21024, seq: 2*24576, gp: 21984, path_profile: 512, scs_ra: 1.25 },
+        "2":  { L: 839, cp: 4688,  seq: 4*24576, gp: 19888, path_profile: 192, scs_ra: 1.25 },
+        "3":  { L: 839, cp: 3168,  seq: 4*6144,  gp: 2976,  path_profile: 192, scs_ra: 5 },
+        "A1": { L: 139, cp: 288,   seq: 2*2048,  gp: 0,     path_profile: 96  },
+        "A2": { L: 139, cp: 576,   seq: 4*2048,  gp: 0,     path_profile: 144 },
+        "A3": { L: 139, cp: 864,   seq: 6*2048,  gp: 0,     path_profile: 144 },
+        "B1": { L: 139, cp: 216,   seq: 2*2048,  gp: 72,    path_profile: 96  },
+        "B2": { L: 139, cp: 360,   seq: 4*2048,  gp: 216,   path_profile: 144 },
+        "B3": { L: 139, cp: 504,   seq: 6*2048,  gp: 360,   path_profile: 144 },
+        "B4": { L: 139, cp: 936,   seq: 12*2048, gp: 792,   path_profile: 144 },
+        "C0": { L: 139, cp: 1240,  seq: 2048,    gp: 1096,  path_profile: 144 },
+        "C2": { L: 139, cp: 2048,  seq: 4*2048,  gp: 2912,  path_profile: 144 }
+    };
+
+    // TS 38.211 Table 6.3.3.1-5/6/7 N_CS for preamble formats
+    const ncsTable1_25khz = [0, 13, 15, 18, 22, 26, 32, 38, 46, 59, 76, 93, 119, 167, 279, 419];
+    const ncsTable5khz    = [0, 13, 26, 33, 38, 41, 49, 55, 64, 76, 93, 119, 139, 209, 279, 419];
+    const ncsTableShort   = [0, 2, 4, 6, 8, 10, 12, 13, 15, 17, 19, 23, 27, 34, 46, 69];
+
+    function update() {
+        const fr = document.getElementById("frType").value;
+        const duplex_mode = document.getElementById("duplexMode").value;
+        const scsSelect = document.getElementById("scs");
+        const formatSelect = document.getElementById("format");
+
+        if (fr === "FR1") {
+            scsSelect.value = (duplex_mode === "FDD") ? "15" : "30";
+            document.getElementById("duplexMode").disabled = false;
+        } else {
+            scsSelect.value = "120";
+            document.getElementById("duplexMode").value = "TDD";
+            document.getElementById("duplexMode").disabled = true;
+        }
+
+        for (let i = 0; i < formatSelect.options.length; i++) {
+            const isLong = ["0", "1", "2", "3"].includes(formatSelect.options[i].value);
+            formatSelect.options[i].disabled = (fr === "FR2" && isLong);
+        }
+        calculate();
+    }
+
+    function calculate() {
+        const fmtKey = document.getElementById("format").value;
+        const zczIdx = parseInt(document.getElementById("zczConfig").value);
+        const scs_khz = parseFloat(document.getElementById("scs").value);
+        const duplexMode = document.getElementById("duplexMode").value;
+        const mu = Math.log2(scs_khz / 15);
+
+        const spec = formatSpecs[fmtKey];
+        const hasGP = spec.gp > 0;
+        const isshort = !["0", "1", "2", "3"].includes(fmtKey);
+
+        // 1. GP長による距離制限
+        if (isshort) {
+            var t_gp = spec.gp / 2 ** mu * Kappa * Tc;
+        }
+        // long formatはSCSによらずGPの時間長は同じ（TS 38.211 Table 6.3.3.1-1）
+        else {
+            var t_gp = spec.gp * Kappa * Tc;
+        }
+        let distGP = hasGP ? (t_gp * C / 2) : 0;
+
+        // 2. CP長による距離制限（format Aのみ）
+        const t_path = spec.path_profile / 2 ** mu * Kappa * Tc;
+        if (isshort) {
+            var t_cp = spec.cp / 2 ** mu * Kappa * Tc;
+        }
+        // プリアンブルの全長を計算するために算出する
+        else {
+            var t_cp = spec.cp * Kappa * Tc;
+        }
+        // マルチパス（t_path）を考慮したCP長による距離制限
+        let distCP = hasGP ? 0 : (t_cp - t_path) * C / 2;
+
+        // 3. ZCZによる距離制限
+        const ncs = (fmtKey === "3") ? ncsTable5khz[zczIdx] : (isshort ? ncsTableShort[zczIdx] : ncsTable1_25khz[zczIdx]);
+        let t_zcz_effective = Infinity;
+        let distZCZ = Infinity;
+        if (ncs > 0) {
+            const ra_scs = isshort ? (scs_khz * 1000) : (spec.scs_ra * 1000);
+            let t_zcz = ncs / (ra_scs * spec.L); // ZCZの時間長
+            t_zcz_effective = t_zcz - t_path; // マルチパスを考慮した有効なZCZ時間
+            distZCZ = t_zcz_effective * C / 2;
+        }
+
+        // 4. 最終判定
+        let Cell_Radius;
+        if (hasGP) {
+            // GPがあるフォーマットなら、GPとZCZの厳しい方をとる
+            Cell_Radius = Math.min(distGP, distZCZ);
+        } else {
+            // GPがない（Format A）なら、CPとZCZの厳しい方をとる
+            Cell_Radius = Math.min(distCP, distZCZ);
+        }
+
+        // 計算結果表示
+        document.getElementById("timeGP").innerText = spec.gp > 0 ? (t_gp * 1e6).toFixed(2) + " μs" : "-";
+        document.getElementById("distGP").innerText = spec.gp > 0 ? Math.round(distGP).toLocaleString() + " m" : "-";
+        document.getElementById("rowGP").className = spec.gp > 0 ? "" : "disabled-row";
+
+        document.getElementById("timeCP").innerText = spec.gp >0 ? "-" : (t_cp * 1e6).toFixed(2) + " μs";
+        document.getElementById("distCP").innerText = spec.gp >0 ? "-" : Math.round(distCP).toLocaleString() + " m";
+        document.getElementById("rowCP").className = spec.gp > 0 ? "disabled-row" : "";
+
+        document.getElementById("timeZCZ").innerText = ncs > 0 ? (t_zcz_effective * 1e6).toFixed(2) + " μs" : "制限なし";
+        document.getElementById("distZCZ").innerText = ncs > 0 ? Math.round(distZCZ).toLocaleString() + " m" : "制限なし";
+
+        // 最終結果表示
+        document.getElementById("finalRadius").innerText = Math.round(Cell_Radius).toLocaleString();
+
+        // TDD情報表示
+        const tddCard = document.querySelector(".tdd-card");
+        if (duplexMode === "TDD") {
+            tddCard.style.display = "";
+
+            const rtt = (2 * Cell_Radius) / C;
+            const guardSymRequired = Math.ceil(rtt / (1e-3 / (14 * 2 ** mu)));
+            if (isshort) {
+                var t_seq = spec.seq / 2 ** mu * Kappa * Tc;
+            }
+            else {
+                var t_seq = spec.seq * Kappa * Tc;
+            }
+            const n_slot_ul = (t_gp + t_cp + t_seq) / (1e-3 / 2 ** mu);
+
+            document.getElementById("ulSlots").innerText = Math.ceil(n_slot_ul);
+            document.getElementById("guardSymbols").innerText = guardSymRequired;
+
+        } else {
+            tddCard.style.display = "";
+            document.getElementById("ulSlots").innerText = "-";
+            document.getElementById("guardSymbols").innerText = "-";
+        }
+    }
+
+    update();
+</script>
+</body>
+</html>
