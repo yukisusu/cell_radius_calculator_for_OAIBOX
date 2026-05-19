@@ -1,2 +1,2 @@
-# cell_radius_calculator_for_OAI
+# cell_radius_calculator_for_OAIBOX
 OAIBOXのための5Gセル半径計算機
