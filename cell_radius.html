@@ -286,26 +286,12 @@
         const isshort = !["0", "1", "2", "3"].includes(fmtKey);
 
         // 1. GP長による距離制限
-        if (isshort) {
-            var t_gp = spec.gp / 2 ** mu * Kappa * Tc;
-        }
-        // long formatはSCSによらずGPの時間長は同じ（TS 38.211 Table 6.3.3.1-1）
-        else {
-            var t_gp = spec.gp * Kappa * Tc;
-        }
+        const t_gp = isshort ? (spec.gp / (2 ** mu) * Kappa * Tc) : (spec.gp * Kappa * Tc);
         let distGP = hasGP ? (t_gp * C / 2) : 0;
 
         // 2. CP長による距離制限（format Aのみ距離制限に使用、それ以外のフォーマットも後続の計算に使用する）
-        if (isshort) {
-            var t_cp = spec.cp / 2 ** mu * Kappa * Tc;
-            var t_path = spec.path_profile / 2 ** mu * Kappa * Tc;
-        }
-        // t_cp：プリアンブルの全長を計算するために算出する
-        // t_path：ZCZによる距離制限の計算で遅延スプレッドを使用するために算出する
-        else {
-            var t_cp = spec.cp * Kappa * Tc;
-            var t_path = spec.path_profile * Kappa * Tc;
-        }
+        const t_cp = isshort ? (spec.cp / (2 ** mu) * Kappa * Tc) : (spec.cp * Kappa * Tc);
+        const t_path = isshort ? (spec.path_profile / (2 ** mu) * Kappa * Tc) : (spec.path_profile * Kappa * Tc);
         // マルチパス（t_path）を考慮したCP長による距離制限
         let distCP = hasGP ? 0 : (t_cp - t_path) * C / 2;
 
@@ -321,14 +307,8 @@
         }
 
         // 4. 最終判定
-        let Cell_Radius;
-        if (hasGP) {
-            // GPがあるフォーマットなら、GPとZCZの厳しい方をとる
-            Cell_Radius = Math.min(distGP, distZCZ);
-        } else {
-            // GPがない（Format A）なら、CPとZCZの厳しい方をとる
-            Cell_Radius = Math.min(distCP, distZCZ);
-        }
+        // GPがある場合、GP vs ZCZ、GPがない場合、CP vs ZCZで厳しい方をセル半径とする
+        const Cell_Radius = hasGP ? Math.min(distGP, distZCZ) : Math.min(distCP, distZCZ);
 
         // 計算結果表示
         document.getElementById("timeGP").innerText = spec.gp > 0 ? (t_gp * 1e6).toFixed(2) + " μs" : "-";
@@ -352,12 +332,7 @@
 
             const rtt = (2 * Cell_Radius) / C;
             const guardSymRequired = Math.ceil(rtt / (1e-3 / (14 * 2 ** mu)));
-            if (isshort) {
-                var t_seq = spec.seq / 2 ** mu * Kappa * Tc;
-            }
-            else {
-                var t_seq = spec.seq * Kappa * Tc;
-            }
+            const t_seq = isshort ? (spec.seq / (2 ** mu) * Kappa * Tc) : (spec.seq * Kappa * Tc);
             const n_slot_ul = (t_gp + t_cp + t_seq) / (1e-3 / 2 ** mu);
 
             document.getElementById("ulSlots").innerText = Math.ceil(n_slot_ul);
