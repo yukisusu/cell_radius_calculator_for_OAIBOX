@@ -114,13 +114,13 @@
                     </select>
                 </div>
                 <div class="control-group">
-                    <label>Ncs (ZCZ設定)</label>
+                    <label>ゼロ相関ゾーン設定</label>
                     <select id="zczConfig" onchange="calculate()">
                         <script>for(let i=0; i<=15; i++) document.write(`<option value="${i}">${i}</option>`);</script>
                     </select>
                 </div>
                 <div class="control-group">
-                    <label>モード</label>
+                    <label>デュプレックスモード</label>
                     <select id="duplexMode" onchange="update()">
                         <option value="FDD">FDD</option>
                         <option value="TDD" selected>TDD</option>
@@ -140,6 +140,7 @@
         <div class="formula-box">
             <div style="font-size: 0.75rem; color: var(--grey); margin-bottom: 5px;">A. Chakrapani, "On the Design Details of SS/PBCH, Signal Generation and PRACH in 5G-NR,"の式を基に作成</div>
             $$ \text{Cell Radius } \le \left( \frac{N_{CS}}{\Delta f_{RA} L_{RA}} - \text{Delay Spread} \right) \times \frac{\text{Light Speed}}{2} $$
+            <div style="font-size: 0.75rem; color: var(--grey); margin-bottom: 5px;"> $$ N_{CS} \text{ : ZCZ長, } \Delta f_{RA} \text{ : ランダムアクセスチャネルのサブキャリア間隔, } L_{RA} \text{ : プリアンブル系列長} $$</div>
         </div>
 
         <div class="main-layout">
@@ -207,6 +208,7 @@
             <h3 class="section-title">参考文献</h3>
             <ul style="font-size: 0.85rem; color: #444; padding-left: 20px; line-height: 1.7;">
                 <li>3GPP TS 38.211 V19.2.0 "NR; Physical channels and modulation", 2025</li>
+                <li>3GPP TS 38.213 V19.3.0 "NR; Physical layer procedures for control", 2026</li>
                 <li>A. Chakrapani, "On the Design Details of SS/PBCH, Signal Generation and PRACH in 5G-NR," in IEEE Access, vol. 8, pp. 136617-136637, 2020, doi: 10.1109/ACCESS.2020.3010500.</li>
                 <li>M. Kottkamp, A. Pandey, D. Raddino, A. Roessler and R. Stuhlfauth, "5G NEW RADIO," ROHDE & SCHWARZ GmbH & Co KG, 2022</li>
             </ul>
