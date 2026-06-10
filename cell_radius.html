@@ -65,9 +65,12 @@
             text-align: center;
             box-shadow: inset 0 0 50px rgba(0,0,0,0.2);
         }
+        .max-radius-box.ng { background: var(--status-ng); }
         .max-radius-label { font-size: 0.9rem; opacity: 0.9; margin-bottom: 10px; font-weight: bold; }
         .max-radius-val { font-size: 4rem; font-weight: bold; color: #ffeb3b; line-height: 1; }
+        .max-radius-val.ng { font-size: 2.5rem; color: #fff; }
         .max-radius-unit { font-size: 1.2rem; margin-left: 5px; color: white; }
+        .ng-reason { font-size: 0.8rem; margin-top: 10px; opacity: 0.9; }
 
         /* TDD info */
         .tdd-card { background: #fffbe6; border: 1px solid #ffe58f; }
@@ -171,12 +174,13 @@
             </div>
 
             <div class="right-stack">
-                <div class="max-radius-box">
+                <div class="max-radius-box" id="maxRadiusBox">
                     <div class="max-radius-label">最大セル半径 (理論値)</div>
                     <div>
                         <span id="finalRadius" class="max-radius-val">-</span>
-                        <span class="max-radius-unit">m</span>
+                        <span id="finalRadiusUnit" class="max-radius-unit">m</span>
                     </div>
+                    <div id="ngReason" class="ng-reason" style="display:none;"></div>
                 </div>
 
                 <div class="res-card tdd-card">
@@ -326,7 +330,25 @@
         document.getElementById("distZCZ").innerText = ncs > 0 ? Math.round(distZCZ).toLocaleString() + " m" : "制限なし";
 
         // 最終結果表示
-        document.getElementById("finalRadius").innerText = Math.round(Cell_Radius).toLocaleString();
+        const maxRadiusBox = document.getElementById("maxRadiusBox");
+        const finalRadiusEl = document.getElementById("finalRadius");
+        const finalRadiusUnit = document.getElementById("finalRadiusUnit");
+        const ngReason = document.getElementById("ngReason");
+
+        if (Cell_Radius <= 0) {
+            maxRadiusBox.classList.add("ng");
+            finalRadiusEl.classList.add("ng");
+            finalRadiusEl.innerText = "設定不可";
+            finalRadiusUnit.style.display = "none";
+            ngReason.style.display = "";
+            ngReason.innerText = "ZCZ設定値が小さすぎるため、有効なセル半径を確保できません";
+        } else {
+            maxRadiusBox.classList.remove("ng");
+            finalRadiusEl.classList.remove("ng");
+            finalRadiusEl.innerText = Math.round(Cell_Radius).toLocaleString();
+            finalRadiusUnit.style.display = "";
+            ngReason.style.display = "none";
+        }
 
         // TDD情報表示
         const tddCard = document.querySelector(".tdd-card");
